@@ -1,14 +1,31 @@
-import React, { FC, FunctionComponent, ReactElement, useEffect } from 'react';
-
-import { Navigate, useLocation } from 'react-router-dom';
-
-import UserModel from '../models/user.model';
-import { RoutersEnum } from '../routers';
-import { ReturnUseAuth, getMe, getMeAuthorities, useAuth } from '../services/auth.service';
-
 const AuthContext = React.createContext<ReturnUseAuth>(undefined!);
 
-export const AuthProvider: FunctionComponent<{ children: ReactElement }> = ({ children }) => {
+export const useAuth = (): ReturnUseAuth => {
+	const tokenService = new TokenService();
+	const isLogin = tokenService.getLocalAccessToken() && tokenService.getLocalRefreshToken();
+
+	const [authed, setAuthed] = useToggle(!!isLogin);
+	const [user, setUser] = useState<UserModel>(null);
+	const [userLoading, setUserLoading] = useState<boolean>(undefined);
+
+	const logout = (): void => {
+		tokenService.removeToken();
+		setAuthed(false);
+		setUser(null);
+	};
+
+	return {
+		authed,
+		logout,
+		setAuthed,
+		user,
+		setUser,
+		userLoading,
+		setUserLoading,
+	};
+};
+
+export const AuthProvider: FunctionComponent<{ children: ReactElement }> = ({children}) => {
 	const auth = useAuth();
 
 	useEffect(() => {
@@ -36,24 +53,24 @@ export default function AuthConsumer(): ReturnUseAuth {
 	return context;
 }
 
-export const NoRequireAuth: FC<{ children: ReactElement }> = ({ children }) => {
-	const { authed } = AuthConsumer();
+export const NoRequireAuth: FC<{ children: ReactElement }> = ({children}) => {
+	const {authed} = AuthConsumer();
 	const location = useLocation();
 
 	return !authed ? (
 		children
 	) : (
-		<Navigate to={RoutersEnum.users_management} state={{ path: location.pathname }} replace />
+		<Navigate to={RoutersEnum.users_management} state={{path: location.pathname}} replace/>
 	);
 };
 
-export const RequireAuth: FC<{ children: ReactElement }> = ({ children }) => {
-	const { authed } = AuthConsumer();
+export const RequireAuth: FC<{ children: ReactElement }> = ({children}) => {
+	const {authed} = AuthConsumer();
 	const location = useLocation();
 
 	return authed ? (
 		children
 	) : (
-		<Navigate to={RoutersEnum.login} state={{ path: location.pathname }} replace />
+		<Navigate to={RoutersEnum.login} state={{path: location.pathname}} replace/>
 	);
 };
